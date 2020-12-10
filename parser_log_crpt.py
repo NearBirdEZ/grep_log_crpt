@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from datetime import datetime as dt
+import datetime
 from datetime import timedelta
 import paramiko
 import requests
@@ -38,13 +38,13 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
                              auth=(login, password))
     response_json = response.json()['hits']['hits'][0]['_source']
     date_receipt = int(response_json['meta']['dateTimeMs']) // 1000
-    date_receipt = dt.utcfromtimestamp(date_receipt).strftime('%Y-%m-%d %H:%M:%S')
+    date_receipt = datetime.datetime.utcfromtimestamp(date_receipt).strftime('%Y-%m-%d %H:%M:%S')
     date_send_to_crpt = None
     if response_json.get('crptInfo'):
         date_send_to_crpt = []
         for crpt_box in response_json['crptInfo']['sendInfo']:
             date_send = int(crpt_box['crptResponseDate']) // 1000
-            date_send = date_receipt = dt.utcfromtimestamp(date_send).strftime('%Y-%m-%d %H:%M:%S')
+            date_send = date_receipt = datetime.datetime.utcfromtimestamp(date_send).strftime('%Y-%m-%d %H:%M:%S')
             date_send_to_crpt.append(date_send)
     return date_receipt, date_send_to_crpt
 
@@ -52,15 +52,15 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
 def eqv_date(get_receipt, get_talon):
     if not get_talon:
         get_talon = [get_receipt]
-    min_date = dt.fromisoformat(min(*[get_receipt], *get_talon))
-    max_date = dt.fromisoformat(max(*[get_receipt], *get_talon))
+    min_date = datetime.datetime.fromisoformat(min(*[get_receipt], *get_talon))
+    max_date = datetime.datetime.fromisoformat(max(*[get_receipt], *get_talon))
     period = max_date.date() - min_date.date()
     return min_date, period.days
 
 
 def get_cmd_log(date, period):
     name_list = []
-    if dt.now().date() == date.date():
+    if datetime.datetime.now().date() == date.date():
         cmd = 'grep'
         name_list.append(f'yellow_prom-ofd-send-to-crpt_{date.strftime("%Y_%m_%d")}.log')
     else:
@@ -96,13 +96,13 @@ def parsing_log(log: list, id_doc):
             if re.search(r'\w{2,}-\w{2,}-\w{2,}-\w{2,}-\w{2,}', line) and (
                     re.search(id_doc, line) or re.search(fiscal_doc_number, line)):
                 big_code = re.findall(r'\w{2,}-\w{2,}-\w{2,}-\w{2,}-\w{2,}', line)[0]
-
+            line = re.sub(r'\[\d{3,}\]:\s\d{3,}-\d{1,}-\d{1,}\s\d{1,}:\d{1,}:\d{1,},\d{1,}\s\[\w{1,9}\]', '', line)
             container.append(line)
     return container
 
 
 def main():
-    start = dt.now()
+    start = datetime.datetime.now()
     print(f'Время старта [{start}]')
 
     user_server, password_server, host_server, port_server = take_properties('server')
@@ -118,7 +118,7 @@ def main():
         os.mkdir("../log_crpt")
 
     for _id in doc_id_list:
-        print(f'Выполняется документ {_id}')
+        print(f'Выполняется документ {":".join(_id)}')
         date_get_receipt, date_send_talon = check_elastic(user_elastic, password_elastic, host_elastic, port_elastic,
                                                           _id[0], _id[1], _id[2])
         low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
@@ -136,7 +136,7 @@ def main():
                 else:
                     file.write(f'Информации по ФД {_id} не найдена в логе {name}\n')
 
-    print(f'Время выполнения [{dt.now() - start}]')
+    print(f'Время выполнения [{datetime.datetime.now() - start}]')
 
 
 if __name__ == '__main__':
