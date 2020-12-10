@@ -106,7 +106,8 @@ def parsing_log(log: list, id_doc):
 
 
 def main():
-    print(dt.now())
+    start = dt.now()
+    print(f'Время старта [{start}]')
 
     user_server, password_server, host_server, port_server = take_properties('server')
     user_elastic, password_elastic, host_elastic, port_elastic = take_properties('elastic')
@@ -121,6 +122,7 @@ def main():
         os.mkdir("../log_crpt")
 
     for _id in doc_id_list:
+        print(f'Выполняется документ {_id}')
         date_get_receipt, date_send_talon = check_elastic(user_elastic, password_elastic, host_elastic, port_elastic,
                                                           _id[0], _id[1], _id[2])
         low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
@@ -137,6 +139,8 @@ def main():
                         file.write(f'{line}\n')
                 else:
                     file.write(f'Информации по ФД {_id} не найдена в логе {name}\n')
+
+    print(f'Время окончания [{dt.now - start}]')
 
 
 if __name__ == '__main__':
