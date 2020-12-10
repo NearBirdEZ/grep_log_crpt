@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+from datetime import date
 from datetime import timedelta
 import paramiko
 import requests
@@ -52,24 +53,24 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
 def eqv_date(get_receipt, get_talon):
     if not get_talon:
         get_talon = [get_receipt]
-    min_date = datetime.datetime.fromisoformat(min(*[get_receipt], *get_talon))
-    max_date = datetime.datetime.fromisoformat(max(*[get_receipt], *get_talon))
-    period = max_date.date() - min_date.date()
+    min_date = date.fromisoformat(min(*[get_receipt], *get_talon).split()[0])
+    max_date = date.fromisoformat(max(*[get_receipt], *get_talon).split()[0])
+    period = max_date - min_date
     return min_date, period.days
 
 
-def get_cmd_log(date, period):
+def get_cmd_log(date_low, period):
     name_list = []
-    if datetime.datetime.now().date() == date.date():
+    if datetime.datetime.now().date() == date_low:
         cmd = 'grep'
-        name_list.append(f'yellow_prom-ofd-send-to-crpt_{date.strftime("%Y_%m_%d")}.log')
+        name_list.append(f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log')
     else:
         cmd = 'zgrep'
         for i in range(period + 1):
-            next_date = date + timedelta(days=1)
+            next_date = date_low + timedelta(days=1)
             name_list.append(
-                f'yellow_prom-ofd-send-to-crpt_{date.strftime("%Y_%m_%d")}.log-{next_date.strftime("%Y%m%d")}.gz')
-            date = date + timedelta(days=1)
+                f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log-{next_date.strftime("%Y%m%d")}.gz')
+            date_low = date_low + timedelta(days=1)
     return cmd, name_list
 
 
