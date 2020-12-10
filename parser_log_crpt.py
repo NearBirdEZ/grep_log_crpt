@@ -52,10 +52,6 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
 def eqv_date(get_receipt, get_talon):
     if not get_talon:
         get_talon = [get_receipt]
-    """
-    min_date = dt.fromisoformat(min(*[get_receipt], *get_talon)).strftime('%Y-%m-%d')
-    max_date = dt.fromisoformat(max(*[get_receipt], *get_talon)).strftime('%Y-%m-%d')
-    """
     min_date = dt.fromisoformat(min(*[get_receipt], *get_talon))
     max_date = dt.fromisoformat(max(*[get_receipt], *get_talon))
     period = max_date.date() - min_date.date()
@@ -140,7 +136,7 @@ def main():
                 else:
                     file.write(f'Информации по ФД {_id} не найдена в логе {name}\n')
 
-    print(f'Время окончания [{dt.now - start}]')
+    print(f'Время выполнения [{dt.now() - start}]')
 
 
 if __name__ == '__main__':
