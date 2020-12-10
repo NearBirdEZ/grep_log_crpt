@@ -125,7 +125,7 @@ def main():
         low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
 
         cmd_grep, name_log = get_cmd_log(low_date, period_days)
-        with open(f'../log_crpt/{_id[0]}_{_id[0]}_{_id[0]}', 'w') as file:
+        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}', 'w') as file:
             for name in name_log:
                 logs, errors = connect_to_ssh(user_server, password_server, host_server, port_server, ":".join(_id), cmd_grep,
                                               name)
