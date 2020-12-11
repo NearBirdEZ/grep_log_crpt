@@ -40,7 +40,7 @@ def check_elastic(login, password, host, port, inn, rnm, fn, fromdate):
                '{"range" : {"requestmessage.dateTime" : {"gte" : %d}}}]}},' \
                '"aggs": {"id": {"terms": {"field": "id","size": 400000}}}}' % (rnm, fn, fromdate)
 
-    response = requests.post(f'http://{host}:{port}/receipt.2020-10/_search', headers=headers, params=params, data=data,
+    response = requests.post(f'http://{host}:{port}/receipt.*/_search', headers=headers, params=params, data=data,
                              auth=(login, password))
 
     return response.json()['aggregations']['id']['buckets']

@@ -36,7 +36,7 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
            '"%s"} }, {"term" : {"requestmessage.kktRegId.raw" : "%s"}}, {"term" : {"requestmessage.' \
            'fiscalDocumentNumber" : "%s"}}] } } }' % (fiscal_num, reg_num, fd)
 
-    response = requests.post(f'http://{host}:{port}/_search', headers=headers, params=params, data=data,
+    response = requests.post(f'http://{host}:{port}/receipt.*/_search', headers=headers, params=params, data=data,
                              auth=(login, password))
     response_json = response.json()['hits']['hits'][0]['_source']
     date_receipt = int(response_json['meta']['dateTimeMs']) // 1000
@@ -46,7 +46,7 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
         date_send_to_crpt = []
         for crpt_box in response_json['crptInfo']['sendInfo']:
             date_send = int(crpt_box['crptResponseDate']) // 1000
-            date_send = date_receipt = datetime.datetime.utcfromtimestamp(date_send).strftime('%Y-%m-%d %H:%M:%S')
+            date_send = datetime.datetime.utcfromtimestamp(date_send).strftime('%Y-%m-%d %H:%M:%S')
             date_send_to_crpt.append(date_send)
     return date_receipt, date_send_to_crpt
 
