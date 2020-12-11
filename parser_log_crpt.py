@@ -7,6 +7,7 @@ import paramiko
 import requests
 import re
 import os.path
+from threading import Thread
 
 
 def take_properties(type_auth):
@@ -60,18 +61,18 @@ def eqv_date(get_receipt, get_talon):
 
 
 def get_cmd_log(date_low, period):
-    name_list = []
-    if datetime.datetime.now().date() == date_low:
-        cmd = 'grep'
-        name_list.append(f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log')
-    else:
-        cmd = 'zgrep'
-        for i in range(period + 1):
+    cmd_log_dict = {}
+    for i in range(period + 1):
+        if datetime.datetime.now().date() == date_low:
+            cmd_grep = 'grep'
+            name_log = f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log'
+        else:
+            cmd_grep = 'zgrep'
             next_date = date_low + timedelta(days=1)
-            name_list.append(
-                f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log-{next_date.strftime("%Y%m%d")}.gz')
-            date_low = date_low + timedelta(days=1)
-    return cmd, name_list
+            name_log = f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log-{next_date.strftime("%Y%m%d")}.gz'
+        date_low = date_low + timedelta(days=1)
+        cmd_log_dict.update({cmd_grep: name_log})
+    return cmd_log_dict
 
 
 def connect_to_ssh(login, password, host, port, doc_id, cmd, name_log):
@@ -85,8 +86,7 @@ def connect_to_ssh(login, password, host, port, doc_id, cmd, name_log):
     return data, error
 
 
-def parsing_log(log: list, id_doc):
-    big_code = 'заглушка'
+def parsing_log(log: list, id_doc, big_code):
     container = []
     for line in log:
         line = re.sub(r'yellow prom-ofd-send-to-crpt', '', line)
@@ -99,8 +99,43 @@ def parsing_log(log: list, id_doc):
                 big_code = re.findall(r'\w{2,}-\w{2,}-\w{2,}-\w{2,}-\w{2,}', line)[0]
             line = re.sub(r'\[\d{3,}\]:\s\d{3,}-\d{1,}-\d{1,}\s\d{1,}:\d{1,}:\d{1,},\d{1,}\s\[\w{1,9}\]', '', line)
             container.append(line)
-    return container
+    return container, big_code
 
+
+def glue_log(cmd_name, doc_id, user_server, password_server, host_server, port_server):
+    code = 'заглушка'
+    errors_container = []
+    log_container = []
+    for cmd, name in cmd_name.items():
+        logs, errors = connect_to_ssh(user_server, password_server, host_server, port_server, doc_id, cmd, name)
+        if '' not in errors:
+            errors_container += errors
+        if '' not in logs:
+            log, code = parsing_log(logs, doc_id, code)
+            log_container += log
+        else:
+            log_container += [f'Информации по ФД {doc_id} не найдена в логе {name}\n']
+    return errors_container, log_container
+
+
+def run(num_thread, doc_id_list, user_server, password_server, host_server, port_server, user_elastic, password_elastic,
+        host_elastic, port_elastic):
+    for i in range(num_thread, len(doc_id_list), 4):
+        _id = doc_id_list[i]
+        print(f'Выполняется документ {":".join(_id)}. Используется поток № {num_thread + 1}')
+        date_get_receipt, date_send_talon = check_elastic(user_elastic, password_elastic, host_elastic, port_elastic,
+                                                          _id[0], _id[1], _id[2])
+        low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
+
+        grep_dict = get_cmd_log(low_date, period_days)
+        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}', 'w') as file:
+            container_with_errors, container_with_log = glue_log(grep_dict, ":".join(_id), user_server, password_server,
+                                                                 host_server, port_server)
+            if container_with_errors:
+                for er in container_with_errors:
+                    file.write(f'{er}\n')
+            for line in container_with_log:
+                file.write(f'{line}\n')
 
 def main():
     start = datetime.datetime.now()
@@ -118,24 +153,14 @@ def main():
     if not os.path.isdir("../log_crpt"):
         os.mkdir("../log_crpt")
 
-    for _id in doc_id_list:
-        print(f'Выполняется документ {":".join(_id)}')
-        date_get_receipt, date_send_talon = check_elastic(user_elastic, password_elastic, host_elastic, port_elastic,
-                                                          _id[0], _id[1], _id[2])
-        low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
-
-        cmd_grep, name_log = get_cmd_log(low_date, period_days)
-        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}', 'w') as file:
-            for name in name_log:
-                logs, errors = connect_to_ssh(user_server, password_server, host_server, port_server, ":".join(_id), cmd_grep,
-                                              name)
-                if '' not in errors:
-                    file.write(f'{errors}\n')
-                if '' not in logs:
-                    for line in parsing_log(logs, ":".join(_id)):
-                        file.write(f'{line}\n')
-                else:
-                    file.write(f'Информации по ФД {_id} не найдена в логе {name}\n')
+    treads = []
+    for i in range(5):
+        t = Thread(target=run, args=(i, doc_id_list, user_server, password_server, host_server, port_server,
+                                     user_elastic, password_elastic, host_elastic, port_elastic))
+        t.start()
+        treads.append(t)
+    for i in range(5):
+        treads[i].join()
 
     print(f'Время выполнения [{datetime.datetime.now() - start}]')
 
