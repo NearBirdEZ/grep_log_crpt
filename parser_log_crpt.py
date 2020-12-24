@@ -8,6 +8,8 @@ import requests
 import re
 import os.path
 from threading import Thread
+import json
+import base64
 
 
 def take_properties(type_auth):
@@ -39,6 +41,18 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
     response = requests.post(f'http://{host}:{port}/receipt.*/_search', headers=headers, params=params, data=data,
                              auth=(login, password))
     response_json = response.json()['hits']['hits'][0]['_source']
+    for item in response_json['requestmessage']['items']:
+        item['productCode'] = [f"base64 = {item['productCode']}",
+                               f"Длинна = {len(item['productCode'])}",
+                               f"hex = {base64.b64decode(item['productCode']).hex()}"]
+
+    with open(f'../log_crpt/{reg_num}_{fiscal_num}_receipt.json', 'w', encoding='utf-8') as file:
+        json.dump(response_json,
+                  file,
+                  indent=4,
+                  ensure_ascii=False,
+                  sort_keys=False)
+
     date_receipt = int(response_json['meta']['dateTimeMs']) // 1000
     date_receipt = datetime.datetime.utcfromtimestamp(date_receipt).strftime('%Y-%m-%d %H:%M:%S')
     date_send_to_crpt = None
@@ -128,7 +142,7 @@ def run(num_thread, doc_id_list, user_server, password_server, host_server, port
         low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
 
         grep_dict = get_cmd_log(low_date, period_days)
-        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}', 'w') as file:
+        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}_log.txt', 'w') as file:
             container_with_errors, container_with_log = glue_log(grep_dict, ":".join(_id), user_server, password_server,
                                                                  host_server, port_server)
             if container_with_errors:
@@ -136,6 +150,7 @@ def run(num_thread, doc_id_list, user_server, password_server, host_server, port
                     file.write(f'{er}\n')
             for line in container_with_log:
                 file.write(f'{line}\n')
+
 
 def main():
     start = datetime.datetime.now()
