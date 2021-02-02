@@ -38,15 +38,16 @@ def check_elastic(login, password, host, port, reg_num, fiscal_num, fd):
            '"%s"} }, {"term" : {"requestmessage.kktRegId.raw" : "%s"}}, {"term" : {"requestmessage.' \
            'fiscalDocumentNumber" : "%s"}}] } } }' % (fiscal_num, reg_num, fd)
 
-    response = requests.post(f'http://{host}:{port}/receipt.*/_search', headers=headers, params=params, data=data,
+    response = requests.post(f'http://{host}:{port}/_search', headers=headers, params=params, data=data,
                              auth=(login, password))
     response_json = response.json()['hits']['hits'][0]['_source']
     for item in response_json['requestmessage']['items']:
-        item['productCode'] = [f"base64 = {item['productCode']}",
-                               f"Длинна = {len(item['productCode'])}",
-                               f"hex = {base64.b64decode(item['productCode']).hex()}"]
+        if item.get('productCode'):
+            item['productCode'] = [f"base64 = {item['productCode']}",
+                                   f"Длинна = {len(item['productCode'])}",
+                                   f"hex = {base64.b64decode(item['productCode']).hex()}"]
 
-    with open(f'../log_crpt/{reg_num}_{fiscal_num}_receipt.json', 'w', encoding='utf-8') as file:
+    with open(f'../log_crpt/{reg_num}_{fiscal_num}_{fd}receipt.json', 'w', encoding='utf-8') as file:
         json.dump(response_json,
                   file,
                   indent=4,
@@ -85,7 +86,10 @@ def get_cmd_log(date_low, period):
             next_date = date_low + timedelta(days=1)
             name_log = f'yellow_prom-ofd-send-to-crpt_{date_low.strftime("%Y_%m_%d")}.log-{next_date.strftime("%Y%m%d")}.gz'
         date_low = date_low + timedelta(days=1)
-        cmd_log_dict.update({cmd_grep: name_log})
+        if cmd_log_dict.get(cmd_grep):
+            cmd_log_dict[cmd_grep] += [name_log]
+        else:
+            cmd_log_dict[cmd_grep] = [name_log]
     return cmd_log_dict
 
 
@@ -94,7 +98,7 @@ def connect_to_ssh(login, password, host, port, doc_id, cmd, name_log):
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(hostname=host, username=login, port=port, password=password)
     stdin, stdout, stderr = client.exec_command(
-        f'{cmd} -A150 {doc_id} /var/log/prom/prom-ofd-send-to-crpt/{name_log}')
+        f'{cmd} -A400 {doc_id} /var/log/prom/prom-ofd-send-to-crpt/{name_log}')
     data, error = stdout.read().decode('utf-8').strip().split('\n'), stderr.read().decode('utf-8').strip().split('\n')
     client.close()
     return data, error
@@ -120,15 +124,16 @@ def glue_log(cmd_name, doc_id, user_server, password_server, host_server, port_s
     code = 'заглушка'
     errors_container = []
     log_container = []
-    for cmd, name in cmd_name.items():
-        logs, errors = connect_to_ssh(user_server, password_server, host_server, port_server, doc_id, cmd, name)
-        if '' not in errors:
-            errors_container += errors
-        if '' not in logs:
-            log, code = parsing_log(logs, doc_id, code)
-            log_container += log
-        else:
-            log_container += [f'Информации по ФД {doc_id} не найдена в логе {name}\n']
+    for cmd, names in cmd_name.items():
+        for name in names:
+            logs, errors = connect_to_ssh(user_server, password_server, host_server, port_server, doc_id, cmd, name)
+            if '' not in errors:
+                errors_container += errors
+            if '' not in logs:
+                log, code = parsing_log(logs, doc_id, code)
+                log_container += log
+            else:
+                log_container += [f'Информации по ФД {doc_id} не найдена в логе {name}\n']
     return errors_container, log_container
 
 
@@ -142,7 +147,7 @@ def run(num_thread, doc_id_list, user_server, password_server, host_server, port
         low_date, period_days = eqv_date(date_get_receipt, date_send_talon)
 
         grep_dict = get_cmd_log(low_date, period_days)
-        with open(f'../log_crpt/{_id[0]}_{_id[1]}_{_id[2]}_log.txt', 'w') as file:
+        with open(f'./log_crpt/{_id[0]}_{_id[1]}_{_id[2]}_log.txt', 'w') as file:
             container_with_errors, container_with_log = glue_log(grep_dict, ":".join(_id), user_server, password_server,
                                                                  host_server, port_server)
             if container_with_errors:
@@ -165,8 +170,8 @@ def main():
             if line.strip() != '':
                 doc_id_list.append(line.strip().split(':'))
 
-    if not os.path.isdir("../log_crpt"):
-        os.mkdir("../log_crpt")
+    if not os.path.isdir("./log_crpt"):
+        os.mkdir("./log_crpt")
 
     treads = []
     for i in range(5):
