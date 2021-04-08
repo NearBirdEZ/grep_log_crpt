@@ -110,7 +110,9 @@ def parsing_log(log: list, id_doc, big_code):
             if re.search(r'\w{2,}-\w{2,}-\w{2,}-\w{2,}-\w{2,}', line) and (
                     re.search(id_doc, line) or re.search(fiscal_doc_number, line)):
                 big_code = re.findall(r'\w{2,}-\w{2,}-\w{2,}-\w{2,}-\w{2,}', line)[0]
-            line = re.sub(r'\[\d{3,}\]:\s\d{3,}-\d{1,}-\d{1,}\s\d{1,}:\d{1,}:\d{1,},\d{1,}\s\[\w{1,9}\]', '', line)
+            # line = re.sub(r'\[\d{3,}\]:\s\d{3,}-\d{1,}-\d{1,}\s\d{1,}:\d{1,}:\d{1,},\d{1,}\s\[\w{1,9}\]', '', line)
+            line = re.sub(r'\[\d{3,}\]:\s', '', line)
+            line = re.sub(r'-\d{1,}-\d{1,}\s\d{1,}:\d{1,}:\d{1,},\d{1,}\s\[\w{1,9}\]', '', line)
             container.append(line)
     return container, big_code
 

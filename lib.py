@@ -78,13 +78,20 @@ class Connections:
         """На вход передаются команды для сервера, на выход отдается результат"""
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=Config.HOST_SSH,
-                       username=Config.USER_SSH,
-                       port=Config.POST_SSH,
-                       password=Config.POST_SSH)
-        stdout, stderr = (out.read().decode('utf-8').strip().split('\n') for out in client.exec_command(cmd)[1:])
-        client.close()
+        try:
+            client.connect(hostname=Config.HOST_SSH,
+                           username=Config.USER_SSH,
+                           port=Config.POST_SSH,
+                           password=Config.POST_SSH)
+            stdout, stderr = (out.read().decode('utf-8').strip().split('\n') for out in client.exec_command(cmd)[1:])
+            client.close()
+        except paramiko.ssh_exception.SSHException:
+            stdout = []
+            stderr = [f'Во время выполнения команды "{cmd}" произошла ошибка. Соединение было разорвано.'
+                      f'\nПросьба повторить попытку']
+            print(*stderr, sep='\n')
         return stdout, stderr
+
 
     @staticmethod
     def elastic_search(data: str, index: str = '*') -> dict or list:

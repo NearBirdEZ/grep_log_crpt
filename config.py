@@ -24,4 +24,4 @@ class Config(object):
 
     threads = 5
 
-    local_version = 0.12
+    local_version = 0.13
