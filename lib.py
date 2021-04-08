@@ -63,44 +63,16 @@ class JsonJob:
             return json.loads(file.read())
 
 
-class __AnyClass:
-
-    def __init__(self, threads):
-        self.threads = threads
-        self.lock = Lock()
-        self.count = 0
-
-    def count_any_one_in_threads(self):
-        self.lock.acquire()
-        self.count += 1
-        self.lock.release()
-
-    def job_function(self, num_thread, lst, a, b):
-        for i in range(num_thread, len(lst), self.threads):
-            return self.threads * a * b * num_thread
-
-    def start_threading(self):
-        tread_list = []
-        lst = []
-        for i in range(self.threads):
-            t = Thread(target=self.job_function, args=(i, lst, 10, 20))
-            t.start()
-            tread_list.append(t)
-        for i in range(self.threads):
-            tread_list[i].join()
-
-
 def get_version():
     url = 'https://github.com/NearBirdEZ/grep_log_crpt/blob/master/config.py'
     response = urlopen(url, cafile=certifi.where())
     html_parser = etree.HTMLParser()
     tree = etree.parse(response, html_parser)
-    online_version = float(tree.xpath('//*[@id="LC25"]/span[3]/text()')[0])
+    online_version = float(tree.xpath('//*[@id="LC27"]/span[3]/text()')[0])
     return online_version == Config.local_version
 
 
 class Connections:
-
     @staticmethod
     def to_ssh(cmd: str) -> tuple:
         """На вход передаются команды для сервера, на выход отдается результат"""

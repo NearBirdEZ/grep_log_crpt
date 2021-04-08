@@ -22,4 +22,6 @@ class Config(object):
     HOST_SSH = os.environ.get('HOST_SSH') or ''
     POST_SSH = os.environ.get('POST_SSH') or ''
 
-    local_version = 0.11
+    threads = 5
+
+    local_version = 0.12

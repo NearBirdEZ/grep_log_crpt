@@ -5,6 +5,7 @@ import os
 from threading import Thread
 import base64
 from lib import Connections, JsonJob, get_version
+from config import Config
 
 
 def get_docs_list(file: str) -> list:
@@ -165,7 +166,7 @@ def start_threading(threads: int, documents: list) -> None:
 def main():
     fd_documents = get_docs_list('docs.txt')
     make_work_dir()
-    start_threading(5, fd_documents)
+    start_threading(Config.threads, fd_documents)
 
 
 if __name__ == '__main__':
