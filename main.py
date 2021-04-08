@@ -61,7 +61,11 @@ def receipt_parsing(receipt: list) -> tuple:
     if receipt.get('crptInfo'):
         date_send_to_crpt = []
         for crpt_box in receipt['crptInfo']['sendInfo']:
-            date_send = int(crpt_box['crptResponseDate']) // 1000 + 10800
+            try:
+                date_send = int(crpt_box.get('crptResponseDate') or crpt_box['resultDocDate']) // 1000 + 10800
+            except KeyError:
+                JsonJob.print_json(receipt)
+                raise KeyError
             date_send = dt.utcfromtimestamp(date_send).strftime('%Y-%m-%d %H:%M:%S')
             date_send_to_crpt.append(date_send)
     return receipt, date_receipt, date_send_to_crpt
