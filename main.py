@@ -10,10 +10,16 @@ from config import Config
 
 def get_docs_list(file: str) -> list:
     doc_list = []
-    with open(file, 'r') as docs:
-        for line in docs:
-            if line.strip() != '':
-                doc_list.append(tuple(line.strip().split(':')))
+    with open(file, 'r') as docs_file:
+        for line in docs_file:
+            if line.strip():
+                rnm, fn, doc = line.strip().split(':')
+                if len(doc.split('-')) > 1:
+                    start_doc, end_doc = (int(num) for num in doc.split('-'))
+                else:
+                    start_doc, end_doc = (int(doc), ) * 2
+                tmp = [(rnm, fn, str(fd)) for fd in range(start_doc, end_doc + 1)]
+                doc_list += tmp
     return doc_list
 
 
@@ -132,7 +138,7 @@ def glue_log(cmd_name, doc_id):
                 log, code = parsing_log(logs, doc_id, code)
                 log_container += log
             else:
-                log_container += [f'Информации по ФД {doc_id} не найдена в логе {name}\n']
+                log_container += [f'Информация по ФД {doc_id} не найдена в логе {name}\n']
     return errors_container, log_container
 
 
