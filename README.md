@@ -10,7 +10,7 @@
 3. pip3 install -r requirements.txt<br>
 4. Заполнить документ docs.txt в формате:<br>
 rnm:fn:fd<br>
-rnm:fn:fd<br>
+rnm:fn:fd_1-fd_23<br>
 ...<br>
 5. python main.py<br>
 <br>
@@ -19,6 +19,6 @@ rnm:fn:fd<br>
 1. source venv/bin/activate<br>
 2. Заполнить документ docs.txt в формате:<br>
 rnm:fn:fd<br>
-rnm:fn:fd<br>
+rnm:fn:fd_1-fd_23<br>
 ...<br>
 3. python main.py<br>
